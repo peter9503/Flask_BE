@@ -8,7 +8,13 @@ import json
 
 @app.route("/create_db", methods=['POST'])
 def create_db():
-    db.create_all()
+    c = db.create_all()
+    try:
+        ac = account(account = "admin", password = "adminadmin", email = "admin@adminadmin")
+        db.session.add(ac)
+        db.session.commit()    
+    except:
+        return "admin already exists"
     return "good"
 
 @app.route('/account/login', methods=['POST'])
@@ -46,6 +52,38 @@ def account_login():
                 out["jwt_token"] = create_access_token(identity="normal")
 
     return json.dumps(out)
+
+@app.route('/account/register', methods=['POST'])
+def register():
+    out = { "state"     :"1",
+            "msg"       :""  }
+    try:
+        js_data = json.loads(request.data.decode('ascii'))
+    except:
+        js_data = request.form
+
+    if len(js_data) == 0:
+        out["state"] = 0
+        out["msg"]   = "not a json string data"
+    
+    elif "account" not in js_data or "password" not in js_data or "email" not in js_data:
+        out["state"] = 0
+        out["msg"]   = "do not receive account or password or email"
+
+    else:
+        p = account.query.filter_by(account = js_data["email"]).first()
+        q = account.query.filter_by(account = js_data["account"]).first()
+        if p != None or q != None:
+            out["state"] = 0
+            out["msg"]   = "account name or email already used"
+        
+        else:
+            ac = account(account = js_data["account"], password = js_data["password"], email = js_data["email"])
+            db.session.add(ac)
+            db.session.commit()
+
+    return json.dumps(out)
+
 
 if __name__ == '__main__':
     app.debug = True
