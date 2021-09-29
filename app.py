@@ -1,6 +1,6 @@
 from main import app
 from main import db
-from flask_jwt_extended import verify_jwt_in_request, create_access_token
+from flask_jwt_extended import jwt_required, create_access_token
 from flask import request
 from model.account import account
 
@@ -49,7 +49,7 @@ def account_login():
             if js_data["account"] == 'admin':
                 out["jwt_token"] = create_access_token(identity="admin")
             else:
-                out["jwt_token"] = create_access_token(identity="normal")
+                out["jwt_token"] = create_access_token(identity=js_data["account"])
 
     return json.dumps(out)
 
@@ -84,6 +84,10 @@ def register():
 
     return json.dumps(out)
 
+@app.route('/account/unregister', methods=['POST'])
+@jwt_required()
+def unregister():
+    return ""
 
 if __name__ == '__main__':
     app.debug = True
