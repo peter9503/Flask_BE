@@ -120,7 +120,46 @@ def unregister():
 
         return out
             
+@app.route('/account/recover', methods=['POST'])
+@jwt_required()
+def recover():
+    out = { "state"     :1,
+            "msg"       :""  }
+    try:
+        js_data = json.loads(request.data.decode('ascii'))
+    except:
+        js_data = request.form
 
+    if len(js_data) == 0:
+        out["state"] = 0
+        out["msg"]   = "not a json string data"
+    
+    elif "account" not in js_data:
+        out["state"] = 0
+        out["msg"]   = "do not receive password"
+
+    else:
+        ac = get_jwt_identity()
+        if ac != "admin":
+            out["state"] = 0
+            out["msg"]   = "please recover as admin"            
+            return out
+
+        q = account.query.filter_by(account = js_data["account"]).first()
+
+        if q is None:
+            out["state"] = 0
+            out["msg"]   = "account doesn't exist"
+
+        elif not q.isDelete:
+            out["state"] = 0
+            out["msg"]   = "account not deleted yet"
+        
+        else:
+            q.isDelete = False
+            db.session.commit()
+
+        return out
 
 if __name__ == '__main__':
     app.debug = True
