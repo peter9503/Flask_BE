@@ -1,6 +1,6 @@
 from main import app
 from main import db
-from flask_jwt_extended import jwt_required, create_access_token
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from flask import request
 from model.account import account
 
@@ -19,7 +19,7 @@ def create_db():
 
 @app.route('/account/login', methods=['POST'])
 def account_login():
-    out = { "state"     :"1",
+    out = { "state"     :1,
             "gwt_token" :"" ,
             "msg"       :""  }
     try:
@@ -36,7 +36,7 @@ def account_login():
         out["msg"]   = "do not receive account or password"
 
     else:
-        q = account.query.filter_by(account = js_data["account"]).first()
+        q = account.query.filter_by(account = js_data["account"], isDelete = False).first()
         if q is None:
             out["state"] = 0
             out["msg"]   = "account doesn't exist"
@@ -55,7 +55,7 @@ def account_login():
 
 @app.route('/account/register', methods=['POST'])
 def register():
-    out = { "state"     :"1",
+    out = { "state"     :1,
             "msg"       :""  }
     try:
         js_data = json.loads(request.data.decode('ascii'))
@@ -87,7 +87,40 @@ def register():
 @app.route('/account/unregister', methods=['POST'])
 @jwt_required()
 def unregister():
-    return ""
+    out = { "state"     :1,
+            "msg"       :""  }
+    try:
+        js_data = json.loads(request.data.decode('ascii'))
+    except:
+        js_data = request.form
+
+    if len(js_data) == 0:
+        out["state"] = 0
+        out["msg"]   = "not a json string data"
+    
+    elif "password" not in js_data:
+        out["state"] = 0
+        out["msg"]   = "do not receive password"
+
+    else:
+        ac = get_jwt_identity()
+        q = account.query.filter_by(account = ac).first()
+
+        if q.isDelete:
+            out["state"] = 0
+            out["msg"]   = "account already deleted"
+        
+        elif not q.valid_password(js_data["password"]):
+            out["state"] = 0
+            out["msg"] = "incorrect password"
+
+        else:
+            q.isDelete = True
+            db.session.commit()
+
+        return out
+            
+
 
 if __name__ == '__main__':
     app.debug = True
